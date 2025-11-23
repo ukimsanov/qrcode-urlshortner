@@ -126,6 +126,11 @@ public class QRMatrix {
         return functionModules[row][col];
     }
 
+    public boolean getModule(int row, int col)
+    {
+        return modules[row][col];
+    }
+
 
     public String toString() 
     {
