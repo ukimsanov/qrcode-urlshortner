@@ -16,9 +16,6 @@ public class QRMatrix {
         drawSeparators();//not needed?
         drawTimingPatterns();
         drawDarkModule();
-
-        
-    
     }
 
 
@@ -46,6 +43,9 @@ public class QRMatrix {
             {
                 for(int col = 0; col < size; col++)
                 {
+                    // Mark as function module
+                    functionModules[row + r][col + c] = true;
+                    
                     if (row == 0 || row == size - 1) //top (0) and bottom row (6)
                         modules[row + r][col + c] = true;
                     
@@ -61,7 +61,31 @@ public class QRMatrix {
 
     private void drawSeparators()
     {
-        //they are already made?
+        //mark separator areas as function modules; they are white/false by default
+        
+        // top left
+        for (int row = 0; row <= 7 && row < SIZE; row++) 
+            if (7 < SIZE) functionModules[row][7] = true;  // right border
+        
+        for (int col = 0; col <= 7 && col < SIZE; col++) 
+            if (7 < SIZE) functionModules[7][col] = true;  // bottom border
+        
+        
+        // top right
+        for (int row = 0; row <= 7 && row < SIZE; row++) 
+            if (13 >= 0) functionModules[row][13] = true;  // left border
+        
+        for (int col = 13; col < SIZE && col <= 20; col++) 
+            if (7 < SIZE) functionModules[7][col] = true;  // bottom border
+        
+        
+        //bottom left
+        for (int row = 13; row < SIZE && row <= 20; row++) 
+            if (7 < SIZE) functionModules[row][7] = true;  //right border
+        
+        for (int col = 0; col <= 7 && col < SIZE; col++) 
+            if (13 >= 0) functionModules[13][col] = true;  //top border
+        
     }
 
     private void drawTimingPatterns()
@@ -69,29 +93,47 @@ public class QRMatrix {
         int row = 8;
         int col = 6;
 
-        for (; row <= 12; row++)
+        for (; row <= 12; row++) 
+        {
+            functionModules[row][col] = true;  //mark as function module
             modules[row][col] = (row % 2 == 0);
+        }
         
 
         row = 6;
         col = 8;
 
-        for (; col <= 12; col++)
+        for (; col <= 12; col++) 
+        {
+            functionModules[row][col] = true;  //mark as function module
             modules[row][col] = (col % 2 == 0);
+        }
     }
 
     private void drawDarkModule() 
     {
+        functionModules[13][8] = true;  //mark as function module
         modules[13][8] = true;  //always black at this position
     }
 
+    public void update(int row, int col, boolean value)
+    {
+        modules[row][col] = value;
+    }
+    
+    public boolean isFunctionModule(int row, int col)
+    {
+        return functionModules[row][col];
+    }
 
-    public String toString() {
+
+    public String toString() 
+    {
         StringBuilder sb = new StringBuilder();
-        for (int row = 0; row < SIZE; row++) {
-            for (int col = 0; col < SIZE; col++) {
+        for (int row = 0; row < SIZE; row++) 
+        {
+            for (int col = 0; col < SIZE; col++) 
                 sb.append(modules[row][col] ? "X" : ".");
-            }
             sb.append("\n");
         }
         return sb.toString();
