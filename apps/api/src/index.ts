@@ -196,6 +196,10 @@ app.post("/api/shorten", async (c) => {
   }
 
   const expiresAt = body.expires_at ?? null;
+  // Validate expiresAt is in the future if provided
+  if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+    return c.json({ error: "expires_at must be in the future" }, 400);
+  }
   const alias = body.alias?.trim() || undefined;
 
   // Validate alias length (max 7 characters)
