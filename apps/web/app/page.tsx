@@ -83,7 +83,8 @@ export default function Home() {
         };
       }
 
-      const res = await fetch("/api/shorten", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const res = await fetch(`${apiUrl}/api/shorten`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
