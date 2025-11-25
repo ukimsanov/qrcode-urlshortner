@@ -7,7 +7,7 @@ import { config } from "./config.js";
 import { generateCode } from "./codegen.js";
 import { createUrl, findUrlByCode, incrementClick } from "./db.js";
 import { cacheGet, cacheSet } from "./cache.js";
-import { generateQr } from "./qr.js";
+import { generateQr, type QrContentType, type QrContentData, type QrCustomization } from "./qr.js";
 
 const app = Fastify({
   logger: true
@@ -21,6 +21,9 @@ type ShortenRequestBody = {
   long_url: string;
   alias?: string;
   expires_at?: string;
+  content_type?: QrContentType;
+  qr_data?: QrContentData;
+  qr_customization?: QrCustomization;
 };
 
 const isValidUrl = (value: string): boolean => {
@@ -43,23 +46,47 @@ app.post("/api/shorten", async (request, reply) => {
 
   const expiresAt = body.expires_at ?? null;
   const alias = body.alias?.trim() || undefined;
+  const contentType = body.content_type ?? "url";
+  const qrCustomization = body.qr_customization;
+
+  // Prepare QR data based on content type
+  let qrData: QrContentData;
+  if (contentType === "url") {
+    qrData = { url: body.long_url };
+  } else {
+    qrData = body.qr_data ?? {};
+  }
 
   let lastError: unknown;
   for (let i = 0; i < 3; i++) {
     const code = alias ?? generateCode(7);
     try {
-      const qrResult = await generateQr({ content: `${config.publicBaseUrl}/${code}` });
+      // Generate QR code with content type and customization
+      const qrResult = await generateQr({
+        contentType,
+        data: qrData,
+        customization: qrCustomization
+      });
+
       const row = await createUrl({
         shortCode: code,
         longUrl: body.long_url,
         alias,
         expiresAt,
         qrStatus: qrResult.status,
-        qrUrl: qrResult.qrUrl
+        qrUrl: qrResult.qrUrl,
+        contentType,
+        qrConfig: qrCustomization
       });
+
       const shortUrl = `${config.publicBaseUrl}/${row.short_code}`;
       void cacheSet(row.short_code, row.long_url);
-      return { code: row.short_code, short_url: shortUrl, qr_url: row.qr_url };
+      return {
+        code: row.short_code,
+        short_url: shortUrl,
+        qr_url: row.qr_url,
+        content_type: row.content_type
+      };
     } catch (err: any) {
       lastError = err;
       if (err?.code === "23505") {

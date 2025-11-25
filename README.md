@@ -1,41 +1,113 @@
-# QR Shortener (Cloudflare Worker + TS API + Postgres + Redis)
+# QR Code + URL Shortener
 
-Architecture
-- Edge redirector: Cloudflare Worker (apps/worker) → Upstash Redis → API resolve → 301.
-*- API service: Fastify + TypeScript (apps/api) → Postgres (Supabase/Neon) for persistence, Upstash Redis for cache/rate limits, Java QR service for PNG/SVG.
-- Web app: Next.js + TS + Tailwind (apps/web) for create + view.
-- QR encoder: separate Java service (`POST /qr`) returning PNG/SVG.
+High-performance URL shortening service with QR code generation, built on edge computing and modern TypeScript.
 
-Data model (Postgres)
-- `urls(id uuid default gen_random_uuid(), short_code unique, long_url, alias unique?, created_at timestamptz default now(), expires_at?, qr_status, qr_url?)`
-- `click_totals(short_code pk/fk, total_clicks bigint default 0, updated_at timestamptz)`
+## Architecture
 
-Redis keys (Upstash, Workers SDK compatible)
-- `r:<code>` -> long_url (TTL ~24h)
-- `rc:<code>` -> optional hot counter
-- `rl:create:<ip>` -> optional rate-limit
+```
+┌─────────────┐
+│  Next.js 16 │  User creates short URL + QR code
+│  (Port 3000)│
+└──────┬──────┘
+       │ /api/* → proxy
+       ↓
+┌─────────────┐
+│  Fastify 5  │  URL shortening + QR orchestration
+│  (Port 3001)│
+└──────┬──────┘
+       │
+       ├─→ PostgreSQL (persistent storage)
+       ├─→ Upstash Redis (24hr cache, edge-compatible)
+       └─→ QR Service (external Java microservice)
 
-Key generation
-- Random base62 (generateCode) length 7; retry on unique violation. Custom alias honored. Avoid MD5 truncation and distributed counters.
+┌──────────────────┐
+│ Cloudflare Worker│  User clicks short URL
+│   (Global Edge)  │
+└──────┬───────────┘
+       │
+       ├─→ Redis (cache hit → instant redirect)
+       └─→ API (cache miss → resolve → cache → redirect)
+```
 
-Flows
-1) Create: Web → API `/api/shorten` → generate code → insert DB → call QR service → return `{ short_url, qr_url? }` and warm Redis.
-2) Redirect: User → Worker `/{code}` → Redis hit? redirect : API resolve → cache → redirect; send best-effort analytics hit.
-3) Analytics: API increments `click_totals` (simple upsert).
+## Tech Stack
 
-Repo layout
-- `apps/web/` — Next.js frontend (App Router, Tailwind).
-- `apps/api/` — Fastify API (TS) with Postgres/Redis/QR helpers.
-- `apps/worker/` — Cloudflare Worker (TS) with Upstash REST.
+- **Next.js 16.0.4** - React 19, App Router, Turbopack
+- **Fastify 5.0.0** - High-performance API server
+- **PostgreSQL** - Persistent storage (Supabase/Neon compatible)
+- **Upstash Redis** - Serverless cache with REST API
+- **Cloudflare Workers** - Global edge redirector
+- **TypeScript 5.6** - End-to-end type safety
 
-Env (apps/api/.env)
-- `DATABASE_URL` Postgres connection string
-- `PUBLIC_BASE_URL` e.g., `https://url-shortner.workers.dev`
-- `REDIS_URL`, `REDIS_TOKEN` from Upstash Redis
-- `QR_SERVICE_URL` Java QR service base URL (optional; best-effort)
-- `REDIS_TTL_SECONDS` cache TTL (default 86400)
+## Repository Structure
 
-Deploy reminders
-- Worker: set `API_BASE_URL` and bind Upstash Redis creds as secrets/vars via Wrangler.
-- API: set envs above; expose over HTTPS so Worker can reach it.
-- Web: point form calls to API.
+```
+apps/
+├── api/          Fastify API service
+│   ├── src/
+│   └── migrations/
+├── web/          Next.js frontend
+│   └── app/
+└── worker/       Cloudflare Worker redirector
+    └── src/
+```
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Configure API
+cd apps/api
+cp .env.example .env
+# Edit .env with your DATABASE_URL, REDIS_URL, REDIS_TOKEN
+
+# Run migrations
+npm run migrate:up
+
+# Start API
+npm run dev
+
+# In another terminal, start web
+cd apps/web
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## API Endpoints
+
+- `POST /api/shorten` - Create short URL with QR code
+- `GET /api/resolve/:code` - Resolve short code to long URL
+- `POST /api/analytics/hit` - Record click event
+
+## Key Design Decisions
+
+See [DESIGN.md](DESIGN.md) for detailed system design rationale.
+
+## Database Schema
+
+See [DATABASE.md](DATABASE.md) for schema documentation.
+
+## Environment Variables
+
+### API (.env)
+```env
+DATABASE_URL=postgresql://user:pass@host:5432/db
+PUBLIC_BASE_URL=http://localhost:3001
+REDIS_URL=https://xxx.upstash.io
+REDIS_TOKEN=xxx
+QR_SERVICE_URL=http://qr-service:8080  # Optional
+REDIS_TTL_SECONDS=86400
+```
+
+### Worker (wrangler secrets)
+```bash
+wrangler secret put UPSTASH_REDIS_REST_URL
+wrangler secret put UPSTASH_REDIS_REST_TOKEN
+wrangler secret put API_BASE_URL
+```
+
+## License
+
+MIT

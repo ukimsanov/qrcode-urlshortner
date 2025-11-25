@@ -16,6 +16,8 @@ export type UrlRow = {
   expires_at: string | null;
   qr_status: string | null;
   qr_url: string | null;
+  content_type: string;
+  qr_config: Record<string, any> | null;
 };
 
 export async function createUrl(params: {
@@ -25,13 +27,24 @@ export async function createUrl(params: {
   expiresAt?: string | null;
   qrStatus?: string;
   qrUrl?: string | null;
+  contentType?: string;
+  qrConfig?: Record<string, any>;
 }): Promise<UrlRow> {
-  const { shortCode, longUrl, alias, expiresAt, qrStatus, qrUrl } = params;
+  const { shortCode, longUrl, alias, expiresAt, qrStatus, qrUrl, contentType, qrConfig } = params;
   const res = await pool.query<UrlRow>(
-    `INSERT INTO urls (short_code, long_url, alias, expires_at, qr_status, qr_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO urls (short_code, long_url, alias, expires_at, qr_status, qr_url, content_type, qr_config)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
-    [shortCode, longUrl, alias ?? null, expiresAt ?? null, qrStatus ?? null, qrUrl ?? null]
+    [
+      shortCode,
+      longUrl,
+      alias ?? null,
+      expiresAt ?? null,
+      qrStatus ?? null,
+      qrUrl ?? null,
+      contentType ?? 'url',
+      qrConfig ? JSON.stringify(qrConfig) : '{}'
+    ]
   );
   return res.rows[0];
 }
