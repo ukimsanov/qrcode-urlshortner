@@ -123,38 +123,31 @@ We'll use **Option A** (Supabase REST API).
 
 ### 3.2 Update server.ts to use Supabase
 
-```bash
-cd apps/api/src
-```
+✅ **Already configured!** The API now uses Supabase REST API by default.
 
-Change import in [server.ts](apps/api/src/server.ts):
+See [server.ts:8](apps/api/src/server.ts#L8):
 ```typescript
-// Before:
-import { createUrl, findUrlByCode, incrementClick } from "./db.js";
-
-// After:
 import { createUrl, findUrlByCode, incrementClick } from "./db-supabase.js";
 ```
 
 ### 3.3 Create wrangler.toml
 
-```bash
-cd apps/api
-cat > wrangler.toml << 'EOF'
-name = "qr-api"
+✅ **Already created!** See [apps/api/wrangler.toml](apps/api/wrangler.toml):
+```toml
+name = "qr-shortener-api"
 main = "src/server.ts"
 compatibility_date = "2025-11-24"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
-PUBLIC_BASE_URL = "https://qr-api.your-subdomain.workers.dev"
+PUBLIC_BASE_URL = "https://qr-shortener-api.your-subdomain.workers.dev"
 
-# Secrets (set via wrangler secret put)
+# Secrets (set via wrangler secret put):
 # SUPABASE_URL
 # SUPABASE_SERVICE_KEY
 # REDIS_URL
 # REDIS_TOKEN
 # QR_SERVICE_URL (optional)
-EOF
 ```
 
 ### 3.4 Set Secrets
@@ -184,46 +177,32 @@ Copy the deployed URL: `https://qr-api.your-subdomain.workers.dev`
 
 ---
 
-## Step 4: Deploy Web to Cloudflare
+## Step 4: Deploy Web to Cloudflare Workers
 
-### Option A: Pages (Git Integration) - Easiest
+✅ **Already configured!** Your Next.js app is ready to deploy to Workers using OpenNext.
 
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com)
-2. Pages → Create project → Connect to Git
-3. Select your repo
-4. Configure:
-   - **Framework preset**: Next.js
-   - **Build command**: `npm run build`
-   - **Build output**: `.next`
-   - **Root directory**: `apps/web`
-5. Environment variables:
-   ```
-   NEXT_PUBLIC_API_URL=https://qr-api.your-subdomain.workers.dev
-   ```
-6. Deploy!
+### Configuration Files
 
-### Option B: Workers with OpenNext - More Control
+- [open-next.config.ts](apps/web/open-next.config.ts) - OpenNext configuration
+- [wrangler.toml](apps/web/wrangler.toml) - Cloudflare Worker configuration
+- [package.json](apps/web/package.json) - Updated with OpenNext scripts
+
+### Deploy
 
 ```bash
 cd apps/web
 
-# Install OpenNext adapter
-npm install --save-dev @opennextjs/cloudflare
-
-# Create wrangler.toml
-cat > wrangler.toml << 'EOF'
-name = "qr-web"
-compatibility_date = "2025-11-24"
-pages_build_output_dir = ".vercel/output/static"
-
-[vars]
-NEXT_PUBLIC_API_URL = "https://qr-api.your-subdomain.workers.dev"
-EOF
-
-# Build and deploy
+# Build Next.js app for Workers
 npm run build
-wrangler deploy
+
+# Preview locally (optional)
+npm run preview
+
+# Deploy to Cloudflare Workers
+npm run deploy
 ```
+
+**Note:** Before deploying, update the `NEXT_PUBLIC_API_URL` in [wrangler.toml](apps/web/wrangler.toml) with your actual API Worker URL.
 
 ---
 
@@ -248,23 +227,73 @@ npm run deploy
 
 ---
 
-## Step 6: Test Everything
+## Step 6: Deployment Verification Checklist
 
-### Test API
+### Pre-Deployment
+- [ ] Supabase project created and migrations run
+- [ ] Upstash Redis database created
+- [ ] All secrets configured in wrangler (use `wrangler secret put`)
+- [ ] Updated Worker URLs in wrangler.toml files
+
+### Deploy Services
+
 ```bash
-curl -X POST https://qr-api.your-subdomain.workers.dev/api/shorten \
+# 1. Deploy API Worker
+cd apps/api
+wrangler deploy
+
+# 2. Deploy Web Worker
+cd ../web
+npm run build
+npm run deploy
+
+# 3. Deploy Redirector Worker
+cd ../worker
+npm run deploy
+```
+
+### Post-Deployment Testing
+
+**Test API:**
+```bash
+curl -X POST https://qr-shortener-api.your-subdomain.workers.dev/api/shorten \
   -H "Content-Type: application/json" \
   -d '{"long_url": "https://google.com", "content_type": "url"}'
 
-# Expected:
-# {"code":"abc123","short_url":"https://qr-api.your-subdomain.workers.dev/abc123","qr_url":null,"content_type":"url"}
+# Expected response:
+# {"code":"abc123","short_url":"https://...workers.dev/abc123","qr_url":"...","content_type":"url"}
 ```
 
-### Test Web
-Open your Cloudflare Pages URL or Worker URL
+**Test Web UI:**
+1. Open `https://qr-shortener-web.your-subdomain.workers.dev`
+2. Enter a URL and generate QR code
+3. Verify QR code displays and short URL is created
 
-### Test Redirect
-Visit `https://your-worker.workers.dev/abc123` → Should redirect to Google
+**Test Redirector:**
+Visit `https://your-redirector.workers.dev/abc123` → Should redirect to Google
+
+**Test Content Types:**
+```bash
+# Test vCard
+curl -X POST https://qr-shortener-api.your-subdomain.workers.dev/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"long_url":"https://example.com","content_type":"vcard","qr_data":{"name":"John Doe","phone":"+1234567890"}}'
+
+# Test WiFi
+curl -X POST https://qr-shortener-api.your-subdomain.workers.dev/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"long_url":"https://example.com","content_type":"wifi","qr_data":{"ssid":"MyWiFi","password":"secret123","encryption":"WPA"}}'
+```
+
+### Verification Checklist
+- [ ] API responds to `/api/shorten` requests
+- [ ] API responds to `/api/resolve/:code` requests
+- [ ] Web UI loads and renders correctly
+- [ ] QR codes are generated (check `qr_url` in response)
+- [ ] Redirector redirects short codes to long URLs
+- [ ] Redis caching works (check logs for cache hits)
+- [ ] All content types work (url, vcard, wifi, email, sms)
+- [ ] QR customization works (colors, error correction)
 
 ---
 
@@ -433,11 +462,28 @@ Already done! ✅
 
 ## Next Steps
 
-1. ✅ Deploy web to Cloudflare Pages
-2. ✅ Update API to use `db-supabase.ts`
-3. ✅ Deploy API to Workers
-4. ✅ Test everything
+**Your repository is now fully configured for Cloudflare Workers deployment!**
+
+### ✅ Completed Configuration
+1. ✅ OpenNext adapter installed and configured
+2. ✅ Next.js build scripts updated
+3. ✅ API updated to use Supabase REST API
+4. ✅ Wrangler configurations created for both Web and API
+5. ✅ Deployment verification checklist ready
+
+### 🚀 Ready to Deploy
+1. Set up Supabase project and run migrations
+2. Create Upstash Redis database
+3. Configure secrets using `wrangler secret put`
+4. Deploy using the commands in Step 6
 5. 🎉 Enjoy sub-50ms global latency!
+
+### 📂 Key Files Updated
+- [apps/web/open-next.config.ts](apps/web/open-next.config.ts) - OpenNext configuration
+- [apps/web/wrangler.toml](apps/web/wrangler.toml) - Web Worker config
+- [apps/web/package.json](apps/web/package.json) - Updated build scripts
+- [apps/api/wrangler.toml](apps/api/wrangler.toml) - API Worker config
+- [apps/api/src/server.ts](apps/api/src/server.ts) - Now uses Supabase REST API
 
 ---
 

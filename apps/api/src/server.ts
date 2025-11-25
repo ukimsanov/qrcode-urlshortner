@@ -5,7 +5,7 @@ import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import { config } from "./config.js";
 import { generateCode } from "./codegen.js";
-import { createUrl, findUrlByCode, incrementClick } from "./db.js";
+import { createUrl, findUrlByCode, incrementClick } from "./db-supabase.js";
 import { cacheGet, cacheSet } from "./cache.js";
 import { generateQr, type QrContentType, type QrContentData, type QrCustomization } from "./qr.js";
 

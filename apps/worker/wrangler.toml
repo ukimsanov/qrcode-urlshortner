@@ -1,7 +1,10 @@
 name = "qr-shortener-worker"
 main = "src/worker.ts"
-compatibility_date = "2024-11-20"
+compatibility_date = "2025-11-24"
 compatibility_flags = ["nodejs_compat"]
+
+# Specify which Cloudflare account to use (required when you have multiple accounts)
+account_id = "568051052fcb248c756d306dece6cfb7"
 
 [vars]
 # API_BASE_URL = "https://api.example.com"
