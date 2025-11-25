@@ -118,28 +118,13 @@ async function findUrlByCode(supabase: SupabaseClient, code: string): Promise<Ur
 }
 
 async function incrementClick(supabase: SupabaseClient, code: string): Promise<void> {
-  const { data: existing } = await supabase
-    .from('click_totals')
-    .select('total_clicks')
-    .eq('short_code', code)
-    .single();
-
-  if (existing) {
-    await supabase
-      .from('click_totals')
-      .update({
-        total_clicks: existing.total_clicks + 1,
-        updated_at: new Date().toISOString()
-      })
-      .eq('short_code', code);
-  } else {
-    await supabase
-      .from('click_totals')
-      .insert({
-        short_code: code,
-        total_clicks: 1,
-        updated_at: new Date().toISOString()
-      });
+  // Use upsert with onConflict and atomic increment via Postgres function
+  const { error } = await supabase
+    .rpc('increment_click_total', {
+      p_short_code: code
+    });
+  if (error) {
+    throw new Error(`Failed to increment click total: ${error.message}`);
   }
 }
 
