@@ -1,8 +1,8 @@
 -- Migration to clean up schema
--- Remove qr_config (no longer using QR customization)
+-- Remove qr_config column (added in earlier migration, no longer using QR customization)
 -- Keep content_type (we use it, always 'url' now)
 
--- Drop qr_config column (not used anymore)
+-- Drop qr_config column (added in earlier migration, not used anymore)
 ALTER TABLE urls DROP COLUMN IF EXISTS qr_config;
 
 -- Ensure content_type exists and has correct default
