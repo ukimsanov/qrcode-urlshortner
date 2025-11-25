@@ -144,13 +144,41 @@ async function incrementClick(supabase: SupabaseClient, code: string): Promise<v
 }
 
 // Cache functions (Redis)
-async function cacheGet(redis: Redis, code: string): Promise<string | null> {
-  return await redis.get<string>(`r:${code}`);
+type CachedUrl = {
+  url: string;
+  expiresAt: string | null;
+};
+
+async function cacheGet(env: Bindings, code: string): Promise<string | null> {
+  const redis = new Redis({
+    url: env.REDIS_URL,
+    token: env.REDIS_TOKEN
+  });
+  const cached = await redis.get<CachedUrl>(`r:${code}`);
+  if (!cached) {
+    return null;
+  }
+  // Check if URL has expired
+  if (cached.expiresAt) {
+    const expires = new Date(cached.expiresAt);
+    if (expires.getTime() <= Date.now()) {
+      // URL has expired, delete from cache and return null
+      // Best-effort deletion - don't fail if Redis is unavailable
+      void redis.del(`r:${code}`).catch(() => {});
+      return null;
+    }
+  }
+  return cached.url;
 }
 
-async function cacheSet(redis: Redis, code: string, longUrl: string, ttlSeconds?: number): Promise<void> {
+async function cacheSet(env: Bindings, code: string, longUrl: string, expiresAt: string | null, ttlSeconds?: number): Promise<void> {
+  const redis = new Redis({
+    url: env.REDIS_URL,
+    token: env.REDIS_TOKEN
+  });
   const ttl = ttlSeconds ?? 86400; // Default 24 hours
-  await redis.set(`r:${code}`, longUrl, { ex: ttl });
+  const value: CachedUrl = { url: longUrl, expiresAt };
+  await redis.set(`r:${code}`, value, { ex: ttl });
 }
 
 // QR generation function (simplified - just generates QR for the short URL)
@@ -233,7 +261,7 @@ app.post("/api/shorten", async (c) => {
       const cacheTtl = row.expires_at
         ? Math.max(60, Math.floor((new Date(row.expires_at).getTime() - Date.now()) / 1000))
         : undefined;
-      void cacheSet(redis, row.short_code, row.long_url, cacheTtl);
+      void cacheSet(c.env, row.short_code, row.long_url, row.expires_at, cacheTtl);
 
       return c.json({
         code: row.short_code,
@@ -289,7 +317,7 @@ app.get("/api/resolve/:code", async (c) => {
   const cacheTtl = row.expires_at
     ? Math.max(60, Math.floor((new Date(row.expires_at).getTime() - Date.now()) / 1000))
     : undefined;
-  void cacheSet(redis, code, row.long_url, cacheTtl);
+  void cacheSet(c.env, code, row.long_url, row.expires_at, cacheTtl);
   return c.json({ long_url: row.long_url });
 });
 
@@ -351,8 +379,8 @@ app.get("/:code", async (c) => {
     : undefined;
 
   // Cache and redirect
-  void cacheSet(redis, code, row.long_url, cacheTtl);
-  void incrementClick(supabase, code);
+  void cacheSet(c.env, code, row.long_url, row.expires_at, cacheTtl);
+  void incrementClick(c.env, code);
   return c.redirect(row.long_url, 301);
 });
 
