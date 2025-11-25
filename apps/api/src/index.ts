@@ -162,20 +162,29 @@ async function cacheGet(env: Bindings, code: string): Promise<string | null> {
   if (cached.expiresAt) {
     const expires = new Date(cached.expiresAt);
     if (expires.getTime() <= Date.now()) {
-      // URL has expired, delete from cache and return null
-      // Best-effort deletion - don't fail if Redis is unavailable
-      void redis.del(`r:${code}`).catch(() => {});
-      return null;
-    }
+// Memoized Redis client per environment
+const redisClientMap = new WeakMap<Bindings, Redis>();
+
+function getRedisClient(env: Bindings): Redis {
+  let client = redisClientMap.get(env);
+  if (!client) {
+    client = new Redis({
+      url: env.REDIS_URL,
+      token: env.REDIS_TOKEN
+    });
+    redisClientMap.set(env, client);
   }
-  return cached.url;
+  return client;
 }
 
-async function cacheSet(env: Bindings, code: string, longUrl: string, expiresAt: string | null, ttlSeconds?: number): Promise<void> {
-  const redis = new Redis({
-    url: env.REDIS_URL,
-    token: env.REDIS_TOKEN
-  });
+// Cache functions (Redis)
+async function cacheGet(env: Bindings, code: string): Promise<string | null> {
+  const redis = getRedisClient(env);
+  return await redis.get<string>(`r:${code}`);
+}
+
+async function cacheSet(env: Bindings, code: string, longUrl: string, ttlSeconds?: number): Promise<void> {
+  const redis = getRedisClient(env);
   const ttl = ttlSeconds ?? 86400; // Default 24 hours
   const value: CachedUrl = { url: longUrl, expiresAt };
   await redis.set(`r:${code}`, value, { ex: ttl });
