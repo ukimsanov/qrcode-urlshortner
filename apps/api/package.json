@@ -21,6 +21,7 @@
     "@upstash/redis": "^1.32.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",
+    "hono": "^4.10.6",
     "pg": "^8.13.1"
   },
   "devDependencies": {

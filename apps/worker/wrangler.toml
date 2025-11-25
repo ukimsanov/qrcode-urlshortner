@@ -7,7 +7,11 @@ compatibility_flags = ["nodejs_compat"]
 account_id = "568051052fcb248c756d306dece6cfb7"
 
 [vars]
-# API_BASE_URL = "https://api.example.com"
+API_BASE_URL = "https://qr-shortener-api.ularkimsanov7.workers.dev"
+
+# Secrets (set via wrangler secret put):
+# UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
+# UPSTASH_REDIS_REST_TOKEN=xxx
 
 [env.dev]
 vars = { API_BASE_URL = "http://localhost:3001" }

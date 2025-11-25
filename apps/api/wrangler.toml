@@ -1,5 +1,5 @@
 name = "qr-shortener-api"
-main = "src/server.ts"
+main = "src/index.ts"
 compatibility_date = "2025-11-24"
 compatibility_flags = ["nodejs_compat"]
 
@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 account_id = "568051052fcb248c756d306dece6cfb7"
 
 [vars]
-PUBLIC_BASE_URL = "https://qr-shortener-api.your-subdomain.workers.dev"
+PUBLIC_BASE_URL = "https://qr-shortener-api.ularkimsanov7.workers.dev"
 
 # Secrets (set via wrangler secret put):
 # SUPABASE_URL=https://xxx.supabase.co
