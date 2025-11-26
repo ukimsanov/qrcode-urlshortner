@@ -150,14 +150,17 @@ export default function Home() {
                     className="w-full relative overflow-hidden group/submit"
                     size="lg"
                   >
-                    {/* Shimmer effect on hover */}
+                    {/* Shimmer effect on hover - Safari compatible */}
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
                       initial={{ x: "-100%" }}
-                      whileHover={{ x: "100%" }}
+                      whileHover={{ x: "200%" }}
                       transition={{ duration: 0.6 }}
+                      style={{
+                        willChange: "transform",
+                      }}
                     />
-                    <span className="relative">
+                    <span className="relative z-10">
                       {loading ? "Generating..." : "Generate Short URL + QR Code"}
                     </span>
                   </Button>

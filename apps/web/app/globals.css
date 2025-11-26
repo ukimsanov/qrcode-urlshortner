@@ -132,15 +132,26 @@
     transition: background-color 300ms ease-in-out, color 300ms ease-in-out;
   }
 
-  /* Smooth transitions for all themed elements */
+  /* Smooth transitions for all themed elements - Safari compatible */
   * {
+    -webkit-transition-property: background-color, border-color, color, fill, stroke;
     transition-property: background-color, border-color, color, fill, stroke;
+    -webkit-transition-timing-function: ease-in-out;
     transition-timing-function: ease-in-out;
+    -webkit-transition-duration: 300ms;
     transition-duration: 300ms;
   }
 
   /* Prevent transition on initial load */
   html.no-transition * {
+    -webkit-transition: none !important;
     transition: none !important;
+  }
+
+  /* Safari-specific fixes */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .backdrop-blur-lg {
+      -webkit-backdrop-filter: blur(16px);
+    }
   }
 }

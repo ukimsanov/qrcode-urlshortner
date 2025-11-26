@@ -12,6 +12,10 @@ export function Navigation() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60"
+      style={{
+        WebkitBackdropFilter: "blur(16px)",
+        backdropFilter: "blur(16px)",
+      }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
@@ -37,15 +41,15 @@ export function Navigation() {
             </motion.div>
 
             {/* Brand text with shimmer effect */}
-            <div className="relative">
+            <div className="relative overflow-hidden">
               <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                 QR.io
               </span>
-              {/* Shimmer overlay */}
+              {/* Shimmer overlay - Safari compatible */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent"
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none"
                 animate={{
-                  x: ["-200%", "200%"],
+                  x: ["-100%", "200%"],
                 }}
                 transition={{
                   duration: 3,
@@ -69,12 +73,12 @@ export function Navigation() {
             </div>
 
             {/* Theme toggle with hover effect */}
-            <div className="relative">
+            <div className="relative z-10">
               <ThemeToggle />
 
               {/* Subtle ring animation on mount */}
               <motion.div
-                className="absolute inset-0 rounded-md ring-2 ring-primary/20"
+                className="absolute inset-0 rounded-md ring-2 ring-primary/20 pointer-events-none"
                 initial={{ scale: 1.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 0 }}
                 transition={{ duration: 1, delay: 0.5 }}
