@@ -172,6 +172,32 @@ async function cacheSet(env: Bindings, code: string, longUrl: string, ttlSeconds
   console.log(`[CACHE] SET SUCCESS r:${code}`);
 }
 
+// Analytics logging function - tracks QR code scans (async, fire-and-forget)
+async function logScan(
+  supabase: SupabaseClient,
+  shortCode: string,
+  request: Request
+): Promise<void> {
+  // Fire and forget - don't await this in the redirect handler
+  const analytics = {
+    short_code: shortCode,
+    scanned_at: new Date().toISOString(),
+    user_agent: request.headers.get("User-Agent") || null,
+    referer: request.headers.get("Referer") || null,
+    country: (request as any).cf?.country || null,
+    city: (request as any).cf?.city || null,
+  };
+
+  // Insert async (don't slow down redirect)
+  try {
+    await supabase.from("url_scans").insert(analytics);
+    console.log(`[ANALYTICS] Logged scan for ${shortCode}`);
+  } catch (error) {
+    // Don't fail the redirect if analytics fails
+    console.error(`[ANALYTICS] Failed to log scan:`, error);
+  }
+}
+
 // QR generation function - calls AWS Lambda to generate QR code
 async function generateQr(env: Bindings, shortUrl: string): Promise<{ status: "ready" | "failed"; qrUrl: string | null }> {
   if (!env.QR_SERVICE_URL) {
@@ -330,6 +356,59 @@ app.get("/api/resolve/:code", async (c) => {
   return c.json({ long_url: row.long_url });
 });
 
+// Update URL destination endpoint (enables dynamic QR codes)
+app.patch("/api/:code", async (c) => {
+  const shortCode = c.req.param("code");
+  const body = await c.req.json<{ long_url: string }>();
+
+  if (!body?.long_url) {
+    return c.json({ error: "long_url is required" }, 400);
+  }
+
+  if (!isValidUrl(body.long_url)) {
+    return c.json({ error: "long_url is invalid" }, 400);
+  }
+
+  // Create client once per request
+  const supabase = getSupabaseClient(c.env);
+
+  // Update database
+  const { data, error } = await supabase
+    .from("urls")
+    .update({
+      long_url: body.long_url,
+      updated_at: new Date().toISOString()
+    })
+    .eq("short_code", shortCode)
+    .select()
+    .single();
+
+  if (error || !data) {
+    if (error?.code === "PGRST116") {
+      return c.json({ error: "Short code not found" }, 404);
+    }
+    console.error(`[UPDATE] Database error:`, error);
+    return c.json({ error: "Failed to update URL" }, 500);
+  }
+
+  // Invalidate cache to ensure new destination is used immediately
+  try {
+    const redis = getRedisClient(c.env);
+    await redis.del(`r:${shortCode}`);
+    console.log(`[UPDATE] Cache invalidated for ${shortCode}`);
+  } catch (error) {
+    // Don't fail the update if cache invalidation fails
+    console.error(`[UPDATE] Failed to invalidate cache:`, error);
+  }
+
+  return c.json({
+    success: true,
+    short_code: shortCode,
+    new_url: body.long_url,
+    message: "QR code destination updated successfully"
+  });
+});
+
 // Analytics hit endpoint
 app.post("/api/analytics/hit", async (c) => {
   const body = await c.req.json<{ code?: string }>();
@@ -381,8 +460,11 @@ app.get("/:code", async (c) => {
     const cached = await cacheGet(c.env, code);
     if (cached) {
       console.log(`[REDIRECT] Cache HIT! Redirecting to: ${cached}`);
+      // Log scan asynchronously (fire and forget - don't slow down redirect)
+      void logScan(supabase, code, c.req.raw);
       console.log(`[REDIRECT] Total time: ${Date.now() - startTime}ms\n`);
-      return c.redirect(cached, 301);
+      // Use 302 (temporary redirect) to allow dynamic URL updates
+      return c.redirect(cached, 302);
     }
     console.log(`[REDIRECT] Cache MISS, checking database...`);
 
@@ -421,10 +503,13 @@ app.get("/:code", async (c) => {
     console.log(`[REDIRECT] Caching URL and incrementing click count...`);
     void cacheSet(c.env, code, row.long_url, cacheTtl);
     void incrementClick(supabase, code);
+    // Log scan asynchronously (fire and forget - don't slow down redirect)
+    void logScan(supabase, code, c.req.raw);
 
     console.log(`[REDIRECT] SUCCESS! Redirecting to: ${row.long_url}`);
     console.log(`[REDIRECT] Total time: ${Date.now() - startTime}ms\n`);
-    return c.redirect(row.long_url, 301);
+    // Use 302 (temporary redirect) to allow dynamic URL updates
+    return c.redirect(row.long_url, 302);
   } catch (error) {
     console.error(`[REDIRECT] ERROR:`, error);
     console.error(`[REDIRECT] Error stack:`, (error as Error).stack);
