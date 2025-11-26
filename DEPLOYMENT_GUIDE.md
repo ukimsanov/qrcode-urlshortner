@@ -170,7 +170,7 @@ cd apps/qr-generator
 
 aws lambda invoke \
   --function-name qr-generator \
-  --payload '{"body":"{\"text\":\"https://example.com\"}"}' \
+  --payload '{"httpMethod": "POST", "body": "{\"text\":\"https://example.com\"}"}' \
   response.json
 
 cat response.json
