@@ -40,6 +40,7 @@ import {
   Edit3,
   CheckCircle2,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 type AnalyticsData = {
@@ -206,11 +207,33 @@ export default function AnalyticsPage() {
       <div className="relative overflow-hidden bg-linear-to-br from-primary/5 via-background to-accent/10">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02]" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16">
+        <div className="relative max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-12 pb-16">
+          {/* Back Navigation */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.3 }}
+            className="mb-8"
+          >
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <motion.div
+                className="p-1.5 rounded-md bg-card/50 group-hover:bg-card border group-hover:border-primary/20 transition-all"
+                whileHover={{ x: -4 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </motion.div>
+              <span>Back to Home</span>
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
             className="max-w-3xl"
           >
             <div className="flex items-center gap-3 mb-4">
@@ -259,8 +282,8 @@ export default function AnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl"
           >
             <div className="bg-card rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-2">
@@ -302,11 +325,11 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Update Destination URL - Dynamic QR Code Feature! */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
           <Card className="border-2 border-primary/20 bg-linear-to-br from-primary/5 to-transparent">
             <CardHeader>
@@ -392,8 +415,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Bento Grid Layout - Not generic three-column! */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Scans Over Time - Takes full width on mobile, 8 cols on desktop */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
