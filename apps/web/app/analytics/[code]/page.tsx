@@ -68,18 +68,26 @@ type AnalyticsData = {
 };
 
 const DEVICE_COLORS = {
-  mobile: "hsl(var(--chart-1))",
-  desktop: "hsl(var(--chart-2))",
-  tablet: "hsl(var(--chart-3))",
-  unknown: "hsl(var(--chart-4))",
+  mobile: "#6366f1",  // Indigo
+  desktop: "#8b5cf6", // Violet
+  tablet: "#ec4899",  // Pink
+  unknown: "#94a3b8", // Slate
 };
 
 const COUNTRY_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "#6366f1", // Indigo
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#f59e0b", // Amber
+  "#10b981", // Emerald
+];
+
+const CITY_COLORS = [
+  "#6366f1", // Indigo
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#f59e0b", // Amber
+  "#10b981", // Emerald
 ];
 
 // Fetcher function for SWR
@@ -437,14 +445,14 @@ export default function AnalyticsPage() {
                   <AreaChart data={data.scans_over_time}>
                     <defs>
                       <linearGradient id="colorScans" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted-foreground/20" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tick={{ fill: "#888", fontSize: 12 }}
                       tickFormatter={(value) =>
                         new Date(value).toLocaleDateString("en-US", {
                           month: "short",
@@ -452,18 +460,21 @@ export default function AnalyticsPage() {
                         })
                       }
                     />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fill: "#888", fontSize: 12 }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                       }}
+                      labelStyle={{ color: "#888", fontWeight: "600" }}
+                      itemStyle={{ color: "#fff" }}
+                      formatter={(value: number) => [`${value} scans`, ""]}
                     />
                     <Area
                       type="monotone"
                       dataKey="count"
-                      stroke="hsl(var(--chart-1))"
+                      stroke="#6366f1"
                       strokeWidth={2}
                       fill="url(#colorScans)"
                     />
@@ -509,7 +520,16 @@ export default function AnalyticsPage() {
                             />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          labelStyle={{ color: "#888", fontWeight: "600" }}
+                          itemStyle={{ color: "#fff" }}
+                          formatter={(value: number) => [`${value} scans`, ""]}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
 
@@ -609,12 +629,12 @@ export default function AnalyticsPage() {
                 {data.top_cities.length > 0 ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={data.top_cities.slice(0, 5)} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted-foreground/20" />
+                      <XAxis type="number" tick={{ fill: "#888", fontSize: 12 }} />
                       <YAxis
                         dataKey="city"
                         type="category"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        tick={{ fill: "#888", fontSize: 12 }}
                         width={100}
                       />
                       <Tooltip
@@ -623,8 +643,16 @@ export default function AnalyticsPage() {
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "8px",
                         }}
+                        labelStyle={{ color: "#888", fontWeight: "600" }}
+                        itemStyle={{ color: "#fff" }}
+                        formatter={(value: number) => [`${value} scans`, ""]}
+                        cursor={{ fill: "rgba(255, 255, 255, 0.1)" }}
                       />
-                      <Bar dataKey="count" fill="hsl(var(--chart-3))" radius={[0, 8, 8, 0]} />
+                      <Bar dataKey="count" radius={[0, 8, 8, 0]}>
+                        {data.top_cities.slice(0, 5).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={CITY_COLORS[index % CITY_COLORS.length]} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
